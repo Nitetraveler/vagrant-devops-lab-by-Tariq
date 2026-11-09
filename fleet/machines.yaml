@@ -1,0 +1,18 @@
+defaults:
+  box: devops/ubuntu2404
+  box_version: "1.1.0"
+
+machines:
+  - name: tools
+    ip: 192.168.70.20
+    role: tooling
+
+  - name: legacy
+    ip: 192.168.70.21
+    role: legacy-app
+    box_version: "1.0.0"
+
+  - name: scratch
+    ip: 192.168.70.22
+    role: scratch
+    autostart: false

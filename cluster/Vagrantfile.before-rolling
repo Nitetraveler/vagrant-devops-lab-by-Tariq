@@ -1,0 +1,48 @@
+NODES = {
+  "app1" => { ip: "192.168.60.11", role: "app" },
+  "app2" => { ip: "192.168.60.12", role: "app" },
+  "lb"   => { ip: "192.168.60.10", role: "lb"  },
+}
+APP_IPS    = NODES.select { |_, o| o[:role] == "app" }.map { |_, o| o[:ip] }
+HOSTS_CMDS = NODES.map { |n, o| "echo '#{o[:ip]} #{n} # lab-cluster' >> /tmp/hosts.new" }.join("\n")
+
+Vagrant.configure("2") do |config|
+  config.vm.box         = "devops/ubuntu2404"
+  config.vm.box_version = "1.0.0"
+
+  config.vm.provision "hosts", type: "shell", run: "always", inline: <<-SHELL
+    grep -v '# lab-cluster$' /etc/hosts > /tmp/hosts.new || true
+    #{HOSTS_CMDS}
+    cat /tmp/hosts.new > /etc/hosts
+  SHELL
+
+  NODES.each do |name, opts|
+    config.vm.define name, primary: (name == "lb") do |node|
+      node.vm.hostname = name
+      node.vm.network "private_network", ip: opts[:ip], netmask: "24"
+      node.vm.provider "docker" do |d|
+        d.name = "lab-#{name}"
+      end
+
+      if opts[:role] == "app"
+        node.vm.provision "app", type: "ansible", run: "always" do |ansible|
+          ansible.playbook           = "ansible/app.yml"
+          ansible.compatibility_mode = "2.0"
+          ansible.groups             = { "app" => ["app1", "app2"], "lb" => ["lb"] }
+          ansible.host_vars          = {
+            "app1" => { "app_color" => "blue" },
+            "app2" => { "app_color" => "green" },
+          }
+          ansible.extra_vars         = {
+            "app_version"                => "2.0",
+            "ansible_python_interpreter" => "/usr/bin/python3",
+          }
+        end
+      else
+        node.vm.network "forwarded_port", guest: 80, host: 8090, host_ip: "127.0.0.1"
+        node.vm.provision "lb", type: "shell", run: "always",
+          path: "provision/lb.sh", args: APP_IPS
+      end
+    end
+  end
+end

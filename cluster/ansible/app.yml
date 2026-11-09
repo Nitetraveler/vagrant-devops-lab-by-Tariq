@@ -1,0 +1,74 @@
+---
+- name: Deploy the lab app
+  hosts: all
+  become: true
+  vars:
+    app_dir: /opt/app
+    app_port: 5000
+
+  tasks:
+    - name: Create application directory
+      ansible.builtin.file:
+        path: "{{ app_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: Install application code
+      ansible.builtin.copy:
+        src: ../app/app.py
+        dest: "{{ app_dir }}/app.py"
+        mode: "0755"
+      register: app_code
+
+    # Spec item 1
+    - name: Render environment file
+      ansible.builtin.template:
+        src: templates/app.env.j2
+        dest: /etc/lab-app.env
+        mode: "0644"
+      register: app_env
+
+    - name: Check whether the app is running
+      ansible.builtin.command: pgrep -f /opt/app/app.py
+      register: app_proc
+      changed_when: false
+      failed_when: false
+
+    # Spec item 2
+    - name: Stop the app because code or config changed
+      ansible.builtin.command: pkill -f /opt/app/app.py
+      when: app_proc.rc == 0 and (app_code is changed or app_env is changed)
+      register: app_stopped
+
+    - name: Wait until the port is released
+      ansible.builtin.wait_for:
+        host: 127.0.0.1
+        port: "{{ app_port }}"
+        state: stopped
+        timeout: 15
+      when: app_stopped is changed
+
+    - name: Start the app with the rendered environment
+      ansible.builtin.shell: |
+        set -a; . /etc/lab-app.env; set +a
+        setsid nohup python3 {{ app_dir }}/app.py > /var/log/app.log 2>&1 < /dev/null &
+      when: app_proc.rc != 0 or app_stopped is changed
+
+    - name: Wait for the app port
+      ansible.builtin.wait_for:
+        host: 127.0.0.1
+        port: "{{ app_port }}"
+        timeout: 15
+
+    - name: Health check
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ app_port }}/healthz"
+        return_content: true
+      register: health
+
+    # Spec item 3
+    - name: Assert healthy
+      ansible.builtin.assert:
+        that: health.content == "ok\n"
+        fail_msg: "App on {{ inventory_hostname }} is not healthy"
+        success_msg: "App on {{ inventory_hostname }} is healthy"

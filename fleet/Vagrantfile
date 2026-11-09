@@ -1,0 +1,46 @@
+require "yaml"
+require "time"
+
+PROJECT_DIR = File.dirname(__FILE__)
+SETTINGS    = YAML.load_file(File.join(PROJECT_DIR, "machines.yaml"))
+DEFAULTS    = SETTINGS.fetch("defaults", {})
+EVENTS_LOG  = File.join(PROJECT_DIR, "fleet-events.log")
+
+Vagrant.configure("2") do |config|
+  config.trigger.after :up do |t|
+    t.name = "record-up"
+    t.info = "Recording successful boot in fleet-events.log"
+    t.ruby do |env, machine|
+      File.open(EVENTS_LOG, "a") { |f| f.puts("#{Time.now.utc.iso8601} up #{machine.name}") }
+    end
+  end
+
+  config.trigger.after :up do |t|
+    t.name       = "report-box"
+    t.info       = "Reporting box release from inside the guest"
+    t.run_remote = { inline: "cat /etc/box-release" }
+  end
+
+  config.trigger.before :destroy do |t|
+    t.name = "record-destroy"
+    t.ruby do |env, machine|
+      File.open(EVENTS_LOG, "a") { |f| f.puts("#{Time.now.utc.iso8601} destroy #{machine.name}") }
+    end
+  end
+
+  SETTINGS.fetch("machines").each do |m|
+    config.vm.define m["name"], autostart: m.fetch("autostart", true) do |node|
+      node.vm.box         = m.fetch("box", DEFAULTS["box"])
+      node.vm.box_version = m.fetch("box_version", DEFAULTS["box_version"]).to_s
+      node.vm.hostname    = m["name"]
+      node.vm.network "private_network", ip: m["ip"], netmask: "24"
+
+      node.vm.provider "docker" do |d|
+        d.name = "fleet-#{m["name"]}"
+      end
+
+      node.vm.provision "role", type: "shell",
+        inline: "echo '#{m["role"]}' > /etc/fleet-role"
+    end
+  end
+end

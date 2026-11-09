@@ -1,0 +1,45 @@
+{
+  "name": "devops/ubuntu2404-http",
+  "description": "Internal Ubuntu 24.04 base box (docker provider)",
+  "versions": [
+    {
+      "version": "1.0.0",
+      "providers": [
+        {
+          "name": "docker",
+          "url": "http://127.0.0.1:8200/devops-ubuntu2404-docker-1.0.0.box",
+          "checksum_type": "sha256",
+          "checksum": "697388ac388ed01970f10c876977bfec33d00ea06aeb35e58e5b17832496b8fa",
+          "architecture": "amd64",
+          "default_architecture": true
+        }
+      ]
+    },
+    {
+      "version": "1.1.0",
+      "providers": [
+        {
+          "name": "docker",
+          "url": "http://127.0.0.1:8200/devops-ubuntu2404-docker-1.1.0.box",
+          "checksum_type": "sha256",
+          "checksum": "7a70c8b222bb3fb859b92b12b29c52bd5b9f7c19fddff3bf01f0a0b232f2e129",
+          "architecture": "amd64",
+          "default_architecture": true
+        }
+      ]
+    },
+    {
+      "version": "1.2.0",
+      "providers": [
+        {
+          "name": "docker",
+          "url": "http://127.0.0.1:8200/devops-ubuntu2404-docker-1.2.0.box",
+          "checksum_type": "sha256",
+          "checksum": "eb7fd80d74490cfdb8a72aa9c1af49cdbc889d5ee2eaa45267d2758c9b26207f",
+          "architecture": "amd64",
+          "default_architecture": true
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+# Python environment
+.venv/
+__pycache__/
+*.pyc
+
+# Vagrant runtime
+.vagrant/
+**/.vagrant/
+
+# SSH private keys and credentials
+*_key
+*_key.pub
+*_private_key
+*.pem
+id_rsa*
+credentials*
+.env
+
+# Generated Vagrant box archives and build directories
+boxes/*.box
+boxes/build-*/
+
+# Runtime logs and test results
+*.log
+cluster/status.txt
+
+# Temporary files
+*.tmp
+*.swp
+.DS_Store
+
+# Allow the public key needed to build the Docker image
+!image/vagrant_lab_key.pub

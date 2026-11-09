@@ -1,0 +1,13 @@
+Vagrant.configure("2") do |config|
+  config.vm.hostname = "first"
+
+  # Use our own key instead of the Vagrant insecure key
+  config.ssh.private_key_path = File.expand_path("~/vagrant-lab/image/vagrant_lab_key")
+  config.ssh.insert_key       = false
+
+  config.vm.provider "docker" do |d|
+    d.image   = "devops-lab/vagrant-ubuntu:1.0.0"
+    d.has_ssh = true
+    d.name    = "lab-first"
+  end
+end
